@@ -37,7 +37,6 @@ dependencies = [
     { name = "pika" },
     { name = "psycopg2-binary" },
     { name = "sqlmodel" },
-    { name = "types-greenlet" },
 ]
 
 [package.dev-dependencies]
@@ -51,7 +50,6 @@ requires-dist = [
     { name = "pika", specifier = ">=1.3.2" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
-    { name = "types-greenlet", specifier = ">=3.1.0.20250401" },
 ]
 
 [package.metadata.requires-dev]
@@ -281,15 +279,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/86/4b/c2ad0496f5bdc6073d9b4cef52be9c04f2b37a5773441cc6600b1857648b/sqlmodel-0.0.24.tar.gz", hash = "sha256:cc5c7613c1a5533c9c7867e1aab2fd489a76c9e8a061984da11b4e613c182423", size = 116780 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/91/484cd2d05569892b7fef7f5ceab3bc89fb0f8a8c0cde1030d383dbc5449c/sqlmodel-0.0.24-py3-none-any.whl", hash = "sha256:6778852f09370908985b667d6a3ab92910d0d5ec88adcaf23dbc242715ff7193", size = 28622 },
-]
-
-[[package]]
-name = "types-greenlet"
-version = "3.1.0.20250401"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c0/c9/50405ed194a02f02a418311311e6ee4dd73eed446608b679e6df8170d5b7/types_greenlet-3.1.0.20250401.tar.gz", hash = "sha256:949389b64c34ca9472f6335189e9fe0b2e9704436d4f0850e39e9b7145909082", size = 8460 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/f3/36c5a6db23761c810d91227146f20b6e501aa50a51a557bd14e021cd9aea/types_greenlet-3.1.0.20250401-py3-none-any.whl", hash = "sha256:77987f3249b0f21415dc0254057e1ae4125a696a9bba28b0bcb67ee9e3dc14f6", size = 8821 },
 ]
 
 [[package]]
