@@ -13,4 +13,4 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["inventory_service", "shared"]
+members = ["inventory_service"]

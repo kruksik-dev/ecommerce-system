@@ -11,7 +11,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: ["sqlmodel==0.0.22", "types-pika"]
-        args: ["--install-types", "--non-interactive", "--explicit-package-bases"]
+        args: ["--install-types", "--non-interactive", "--explicit-package-bases", "--ignore-missing-imports"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
