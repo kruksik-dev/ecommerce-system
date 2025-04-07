@@ -1,18 +1,8 @@
-import os
-import sys
-
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel
 
 from inventory_service.rabbitmq import RabbitMQClient
 from inventory_service.repository import InventoryRepository
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://user:password@postgres:5432/inventory_db"
-)
-engine = create_engine(DATABASE_URL)
-
+from inventory_service.database.db_engine import engine
 
 SQLModel.metadata.create_all(engine)
 

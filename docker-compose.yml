@@ -18,15 +18,15 @@ services:
       - .env
 
   inventory:
-    tty: true
     build:
       context: .
-      dockerfile: inventory_service/Dockerfile
+      dockerfile: ./inventory_service/Dockerfile
     depends_on:
       - postgres
       - rabbitmq
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
-
+    ports:
+      - "${INVENTORY_SERVICE_PORT}:8000"
 volumes:
   postgres_data:

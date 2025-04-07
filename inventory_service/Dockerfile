@@ -1,21 +1,18 @@
 FROM python:3.13-alpine AS builder
 
 WORKDIR /app
-COPY ../pyproject.toml ./pyproject.toml
-COPY ../uv.lock ./uv.lock
 
-RUN pip install --no-cache-dir uv \
-    && uv venv \
-    && . /app/.venv/bin/activate \
-    && uv sync --no-dev
+COPY ./inventory_service/pyproject.toml .
+COPY ./inventory_service/README.md .
+COPY ./inventory_service/src ./src
+
+RUN pip install --no-cache-dir build \
+    && python -m build --wheel --outdir dist
 
 FROM python:3.13-alpine
+
 WORKDIR /app
 
-COPY --from=builder /app/.venv /app/.venv
-COPY ./inventory_service ./inventory_service
-
-ENV PATH="/app/.venv/bin:$PATH"
-ENV VIRTUAL_ENV="/app/.venv"
-
-CMD ["python", "inventory_service/main.py"]
+COPY --from=builder /app/dist/*.whl /app/
+RUN pip install --no-cache-dir /app/*.whl
+CMD ["uvicorn", "inventory_service.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
