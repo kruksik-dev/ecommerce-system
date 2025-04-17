@@ -1,27 +1,21 @@
-from sqlmodel import Session, SQLModel
+from contextlib import asynccontextmanager
 
-from inventory_service.rabbitmq import RabbitMQClient
-from inventory_service.repository import InventoryRepository
-from inventory_service.database.db_engine import engine
+from fastapi import FastAPI
 
-SQLModel.metadata.create_all(engine)
-
-mq = RabbitMQClient(queue_name="order_created")
+from inventory_service.api.endpoints import router as api_router
+from inventory_service.database.db_engine import init_db
+from inventory_service.broker.consumer import start_worker
 
 
-def handle_order_created(data):
-    product_id = data["product_id"]
-    quantity = data["quantity"]
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    import asyncio
 
-    with Session(engine) as session:
-        repo = InventoryRepository(session)
-        success = repo.decrease_stock(product_id, quantity)
-
-    if success:
-        print(f"Stock updated for product {product_id}")
-    else:
-        print(f"Insufficient stock for product {product_id}")
+    asyncio.create_task(start_worker())
+    yield
 
 
-if __name__ == "__main__":
-    mq.consume(callback=handle_order_created)
+app = FastAPI(lifespan=lifespan)
+
+app.include_router(api_router, prefix="/api")

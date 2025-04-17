@@ -15,4 +15,4 @@ WORKDIR /app
 
 COPY --from=builder /app/dist/*.whl /app/
 RUN pip install --no-cache-dir /app/*.whl
-CMD ["uvicorn", "inventory_service.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "inventory_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

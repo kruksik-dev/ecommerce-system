@@ -1,0 +1,6 @@
+* printy zamienić na loggery
+* poprawić logikę czekania na rabbitmq po postawieniu dockera
+* dodać logikę sprawdzającą dokładność liczby (czyli czy można zabrać ze stanu)
+* dodać / wrócić z crudem
+* testy
+* ustawienia linterów itd

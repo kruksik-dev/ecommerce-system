@@ -1,13 +1,11 @@
-import os
 from typing import Any, AsyncGenerator, Final
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-DATABASE_URL: Final = os.getenv(
-    "DATABASE_URL", "postgresql+asyncpg://user:password@postgres:5432/inventory_db"
-)
+from inventory_service.core.core import DATABASE_URL
+
 engine: Final = create_async_engine(DATABASE_URL)
 
 
