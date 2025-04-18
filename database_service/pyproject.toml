@@ -1,0 +1,16 @@
+[project]
+name = "database-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "asyncpg>=0.30.0",
+    "fastapi>=0.115.12",
+    "sqlmodel>=0.0.24",
+    "uvicorn>=0.34.1",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

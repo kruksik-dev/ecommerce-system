@@ -1,18 +1,12 @@
-FROM python:3.13-alpine AS builder
-
-WORKDIR /app
-
-COPY ./inventory_service/pyproject.toml .
-COPY ./inventory_service/README.md .
-COPY ./inventory_service/src ./src
-
-RUN pip install --no-cache-dir build \
-    && python -m build --wheel --outdir dist
-
 FROM python:3.13-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/dist/*.whl /app/
-RUN pip install --no-cache-dir /app/*.whl
-CMD ["uvicorn", "inventory_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY /inventory_service /inventory_service
+COPY shared /shared
+COPY /inventory_service/src/inventory_service/consumer.py .
+RUN pip install --upgrade pip
+RUN pip install /shared
+RUN pip install /inventory_service
+
+CMD ["python", "/app/consumer.py"]

@@ -13,4 +13,10 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["inventory_service"]
+members = ["inventory_service", "gateway", "shared", "database_service"]
+
+
+[tool.uv.sources]
+shared = { workspace = true }
+gateway = { workspace = true }
+inventory_service = { workspace = true }
