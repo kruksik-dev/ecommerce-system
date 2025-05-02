@@ -1,57 +1,67 @@
 ---
+
 services:
-  db:
-    image: postgres:15
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
+  database:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ecommerce
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user"]
+      interval: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "5050:80"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
 
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
-    env_file:
-      - .env
+      - "5672:5672"  # Correct RabbitMQ port mapping
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      retries: 10
 
-  database_service:
+  api_gateway:
     build:
-      context: .
-      dockerfile: ./database_service/Dockerfile
+      context: ./api_gateway
+      dockerfile: Dockerfile
     depends_on:
-      - rabbitmq
-      - db
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
-      - "${CRUD_PORT}:8000"
+      - "5000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      - RABBITMQ_HOST=rabbitmq
 
-  gateway:
+  order_services:
     build:
-      context: .
-      dockerfile: ./gateway/Dockerfile
+      context: ./order_services
+      dockerfile: Dockerfile
     depends_on:
-      - rabbitmq
-    ports:
-      - "${GATEWAY_PORT}:8000"
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
-
-  inventory_service:
-    build:
-      context: .
-      dockerfile: ./inventory_service/Dockerfile
-    depends_on:
-      - rabbitmq
-      - db
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
-
+      - DATABASE_URL=postgresql+asyncpg://user:password@database:5432/ecommerce
+      - RABBITMQ_HOST=rabbitmq
 
 volumes:
   postgres_data:
+  pgadmin-data:
