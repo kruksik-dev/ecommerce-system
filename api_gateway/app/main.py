@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from producer import publish
 from schemas import OrderRequest
 

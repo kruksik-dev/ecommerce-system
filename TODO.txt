@@ -1,3 +1,0 @@
-Refactor kodu,
-Komentarze plus logger
-readme w obydwu przypadkach (głowne oraz poboczne)
