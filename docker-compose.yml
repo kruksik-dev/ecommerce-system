@@ -7,8 +7,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ecommerce
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       retries: 10
 
@@ -52,6 +54,19 @@ services:
   order_services:
     build:
       context: ./order_services
+      dockerfile: Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
+      - RABBITMQ_HOST=rabbitmq
+
+  inventory_service:
+    build:
+      context: ./inventory_service
       dockerfile: Dockerfile
     depends_on:
       database:
