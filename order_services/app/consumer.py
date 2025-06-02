@@ -9,8 +9,7 @@ from typing import Any
 import pika
 from database import async_session, create_db_and_tables
 from models import Order
-
-from order_services.app.setup_logger import setup_logging
+from setup_logger import setup_logging
 
 _logger = logging.getLogger(__name__)
 
