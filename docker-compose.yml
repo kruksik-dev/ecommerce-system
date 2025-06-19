@@ -4,11 +4,13 @@ services:
   database:
     image: postgres:16
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ecommerce
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       retries: 10
 
@@ -28,7 +30,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"  # Correct RabbitMQ port mapping
+      - "5672:5672"
       - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
@@ -59,7 +61,20 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@database:5432/ecommerce
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
+      - RABBITMQ_HOST=rabbitmq
+
+  inventory_service:
+    build:
+      context: ./inventory_service
+      dockerfile: Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
 
 volumes:
