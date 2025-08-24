@@ -49,6 +49,7 @@ services:
     ports:
       - "5000:8000"
     environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
 
   order_services:
@@ -67,6 +68,19 @@ services:
   inventory_service:
     build:
       context: ./inventory_service
+      dockerfile: Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
+      - RABBITMQ_HOST=rabbitmq
+
+  user_services:
+    build:
+      context: ./user_services
       dockerfile: Dockerfile
     depends_on:
       database:
