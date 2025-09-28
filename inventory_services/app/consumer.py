@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import time
-from functools import partial
 from threading import Thread
 from typing import Any
 
@@ -44,7 +42,7 @@ async def check_and_update_inventory(data: dict[str, Any]) -> dict[str, Any]:
         return {"success": True, "message": "Inventory updated"}
 
 
-async def add_new_item(data: dict[str, Any]) -> None:
+async def add_new_item(data: dict[str, Any]) -> Inventory:
     _logger.info(f"Adding new item to inventory: {data}")
     async with async_session() as session:
         quantity = data["quantity"]
@@ -54,6 +52,7 @@ async def add_new_item(data: dict[str, Any]) -> None:
         await session.commit()
         await session.refresh(inv)
         _logger.info(f"New item committed to database: {inv}")
+        return inv
 
 
 def process_order_validate(ch, method, props, body, loop) -> None:
@@ -72,7 +71,7 @@ def process_order_validate(ch, method, props, body, loop) -> None:
         }
         ch.basic_publish(
             exchange="",
-            routing_key="order_validate_response",
+            routing_key=props.reply_to if props.reply_to else "order_validate_response",
             properties=pika.BasicProperties(correlation_id=props.correlation_id),
             body=json.dumps(response),
         )
@@ -88,7 +87,21 @@ def process_inventory_new_item(ch, method, props, body, loop) -> None:
         data = json.loads(body)
         _logger.info(f"Received inventory_new_item message: {data}")
         future = asyncio.run_coroutine_threadsafe(add_new_item(data), loop)
-        future.result(timeout=30)  # zapewnia widoczność błędów
+        inv = future.result(timeout=30)
+        response = {
+            "id": inv.id,
+            "quantity": inv.quantity,
+            "description": inv.description,
+            "created_at": inv.created_at.isoformat() if inv.created_at else None,
+        }
+        ch.basic_publish(
+            exchange="",
+            routing_key=props.reply_to
+            if props.reply_to
+            else "inventory_new_item_response",
+            properties=pika.BasicProperties(correlation_id=props.correlation_id),
+            body=json.dumps(response),
+        )
         ch.basic_ack(delivery_tag=method.delivery_tag)
         _logger.info(f"New inventory item added: {data}")
     except Exception as e:
@@ -97,32 +110,25 @@ def process_inventory_new_item(ch, method, props, body, loop) -> None:
 
 
 def consume_messages(loop: asyncio.AbstractEventLoop) -> None:
-    while True:
-        try:
-            _logger.info("Connecting to RabbitMQ...")
-            connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=RABBITMQ_HOST)
-            )
-            channel = connection.channel()
-            channel.queue_declare(queue="order_validate", durable=True)
-            channel.queue_declare(queue="inventory_new_item", durable=True)
-            channel.basic_qos(prefetch_count=1)
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    channel = connection.channel()
 
-            channel.basic_consume(
-                queue="order_validate",
-                on_message_callback=partial(process_order_validate, loop=loop),
-            )
+    channel.queue_declare(queue="order_validate", durable=True)
+    channel.queue_declare(queue="inventory_new_item", durable=True)
+    channel.basic_qos(prefetch_count=1)
 
-            channel.basic_consume(
-                queue="inventory_new_item",
-                on_message_callback=partial(process_inventory_new_item, loop=loop),
-            )
+    def on_order_validate(ch, method, props, body):
+        process_order_validate(ch, method, props, body, loop)
 
-            _logger.info("Inventory consumer started")
-            channel.start_consuming()
-        except Exception as e:
-            _logger.warning(f"Unexpected error: {e}. Reconnecting in 5 seconds...")
-            time.sleep(5)
+    def on_inventory_new_item(ch, method, props, body):
+        process_inventory_new_item(ch, method, props, body, loop)
+
+    channel.basic_consume(queue="order_validate", on_message_callback=on_order_validate)
+    channel.basic_consume(
+        queue="inventory_new_item", on_message_callback=on_inventory_new_item
+    )
+    _logger.info("Started consuming on 'order_validate' and 'inventory_new_item'")
+    channel.start_consuming()
 
 
 async def main() -> None:

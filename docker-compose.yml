@@ -65,9 +65,9 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
 
-  inventory_service:
+  inventory_services:
     build:
-      context: ./inventory_service
+      context: ./inventory_services
       dockerfile: Dockerfile
     depends_on:
       database:
