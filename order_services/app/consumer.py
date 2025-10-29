@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import time
 import uuid
 from threading import Thread
 from typing import Any
@@ -17,7 +16,7 @@ _logger = logging.getLogger(__name__)
 RABBITMQ_HOST: str = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
 
-async def save_order(data: dict[str, Any]) -> None:
+async def save_order(data: dict[str, Any]) -> Order:
     _logger.info(f"Processing save_order: {data}")
     async with async_session() as session:
         order = Order(**data)
@@ -25,6 +24,7 @@ async def save_order(data: dict[str, Any]) -> None:
         await session.commit()
         await session.refresh(order)
         _logger.info(f"Order saved: {order.id}")
+        return order
 
 
 def validate_inventory(data: dict[str, Any]) -> tuple[bool, str]:
@@ -69,8 +69,12 @@ def validate_inventory(data: dict[str, Any]) -> tuple[bool, str]:
     return response.get("success", False), response.get("message", "")
 
 
-def process_message(body: bytes, loop: asyncio.AbstractEventLoop) -> bool:
-    """Process a single RabbitMQ message"""
+def process_message(
+    body: bytes,
+    props: pika.BasicProperties,
+    channel: pika.adapters.blocking_connection.BlockingChannel,
+    loop: asyncio.AbstractEventLoop,
+) -> bool:
     try:
         data: dict[str, Any] = json.loads(body)
         _logger.info(f"Processing order: {data}")
@@ -78,42 +82,82 @@ def process_message(body: bytes, loop: asyncio.AbstractEventLoop) -> bool:
         valid, message = validate_inventory(data)
         _logger.info(f"Valid: {valid}, Message: {message}")
         if not valid:
+            response = {
+                "order_id": None,
+                "success": False,
+                "message": f"Order failed: {message}",
+                "order_data": data,
+                "created_at": None,
+            }
+            if props.reply_to:
+                channel.basic_publish(
+                    exchange="",
+                    routing_key=props.reply_to,
+                    properties=pika.BasicProperties(
+                        correlation_id=props.correlation_id
+                    ),
+                    body=json.dumps(response),
+                )
             _logger.warning(f"Inventory validation failed: {message}")
             return False
 
         future = asyncio.run_coroutine_threadsafe(save_order(data), loop)
-        future.result(timeout=30)
+        order: Order = future.result(timeout=30)
+        response = {
+            "order_id": order.id,
+            "success": True,
+            "message": "Order created successfully",
+            "order_data": data,
+            "created_at": order.created_at.isoformat()
+            if hasattr(order, "created_at") and order.created_at
+            else None,
+        }
+        if props.reply_to:
+            channel.basic_publish(
+                exchange="",
+                routing_key=props.reply_to,
+                properties=pika.BasicProperties(correlation_id=props.correlation_id),
+                body=json.dumps(response),
+            )
         return True
     except Exception as e:
         _logger.error(f"Failed to process message: {e}")
+        response = {
+            "order_id": None,
+            "success": False,
+            "message": f"Order failed: {str(e)}",
+            "order_data": None,
+            "created_at": None,
+        }
+        if props and hasattr(props, "reply_to") and props.reply_to:
+            channel.basic_publish(
+                exchange="",
+                routing_key=props.reply_to,
+                properties=pika.BasicProperties(correlation_id=props.correlation_id),
+                body=json.dumps(response),
+            )
         return False
 
 
 def consume_messages(loop: asyncio.AbstractEventLoop) -> None:
-    """Synchronously consume messages from RabbitMQ"""
-    while True:
-        try:
-            connection: pika.BlockingConnection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=RABBITMQ_HOST)
-            )
-            channel: pika.adapters.blocking_connection.BlockingChannel = (
-                connection.channel()
-            )
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    channel = connection.channel()
 
-            channel.queue_declare(queue="order_created", durable=True)
-            channel.basic_qos(prefetch_count=1)
+    queue_name = "order_created"
+    channel.queue_declare(queue=queue_name, durable=True)
+    channel.basic_qos(prefetch_count=1)
 
-            for method, *_, body in channel.consume("order_created"):
-                success: bool = process_message(body, loop)
+    def on_message(ch, method, props, body) -> None:
+        success = process_message(body, props, ch, loop)
+        if method and method.delivery_tag is not None:
+            if success:
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+            else:
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
-                if method and method.delivery_tag is not None:
-                    if success:
-                        channel.basic_ack(method.delivery_tag)
-                    else:
-                        channel.basic_nack(method.delivery_tag, requeue=False)
-        except Exception as e:
-            _logger.warning(f"Unexpected error: {e}. Reconnecting in 5 seconds...")
-            time.sleep(5)
+    channel.basic_consume(queue=queue_name, on_message_callback=on_message)
+    _logger.info("Started consuming on 'order_created'")
+    channel.start_consuming()
 
 
 async def main() -> None:

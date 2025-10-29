@@ -35,3 +35,17 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class OrderCreateResponse(BaseModel):
+    order_id: int | None = None
+    success: bool
+    message: str
+    order_data: dict | None = None
+
+
+class InventoryAddResponse(BaseModel):
+    id: int
+    quantity: int
+    description: str | None = None
+    created_at: str

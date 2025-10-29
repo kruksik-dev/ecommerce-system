@@ -2,12 +2,14 @@ from crud import get_all_users, get_user_by_id
 from fastapi import APIRouter, FastAPI, HTTPException
 from models import (
     InventoryAddRequest,
+    InventoryAddResponse,
+    OrderCreateResponse,
     OrderRequest,
     UserRegisterRequest,
     UserRegisterResponse,
     UserResponse,
 )
-from producer import publish, publish_and_wait_for_response
+from producer import publish_and_wait_for_response
 
 app = FastAPI()
 
@@ -17,16 +19,16 @@ inventory_router = APIRouter(prefix="/inventory", tags=["Inventory"])
 user_router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@main_router.post("/orders")
-def create_order(order: OrderRequest) -> dict[str, str]:
-    publish("order_created", order.model_dump())
-    return {"message": "Order received"}
+@main_router.post("/orders", response_model=OrderCreateResponse)
+def create_order(order: OrderRequest) -> OrderCreateResponse:
+    response = publish_and_wait_for_response("order_created", order.model_dump())
+    return OrderCreateResponse(**response)
 
 
-@inventory_router.post("/new")
-def add_new_inventory_item(item: InventoryAddRequest) -> dict[str, str]:
-    publish("inventory_new_item", item.model_dump())
-    return {"message": "New inventory item add request sent"}
+@inventory_router.post("/new", response_model=InventoryAddResponse)
+def add_new_inventory_item(item: InventoryAddRequest) -> InventoryAddResponse:
+    response = publish_and_wait_for_response("inventory_new_item", item.model_dump())
+    return InventoryAddResponse(**response)
 
 
 @user_router.post("/register", response_model=UserRegisterResponse)
