@@ -33,9 +33,11 @@ services:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 5s
-      retries: 10
+      test: ["CMD", "bash", "-c", "rabbitmq-diagnostics check_port_connectivity && rabbitmq-diagnostics -q ping && rabbitmq-diagnostics -q check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
 
   api_gateway:
     build:
@@ -51,6 +53,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_CONNECTION_ATTEMPTS=10
+      - RABBITMQ_RETRY_DELAY=5
 
   order_services:
     build:
@@ -64,6 +68,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_CONNECTION_ATTEMPTS=10
+      - RABBITMQ_RETRY_DELAY=5
 
   inventory_services:
     build:
@@ -77,6 +83,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_CONNECTION_ATTEMPTS=10
+      - RABBITMQ_RETRY_DELAY=5
 
   user_services:
     build:
@@ -90,6 +98,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@database:5432/ecommerce
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_CONNECTION_ATTEMPTS=10
+      - RABBITMQ_RETRY_DELAY=5
 
 volumes:
   postgres_data:
