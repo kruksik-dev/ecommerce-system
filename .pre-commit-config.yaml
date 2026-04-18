@@ -35,19 +35,3 @@ repos:
     hooks:
       - id: bandit
         args: ["--recursive", "--exclude", "tests,docs,examples,build,dist,.venv,.git"]
-
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
-    hooks:
-      - id: codespell
-        additional_dependencies: ["tomli"]
-        exclude: |
-          Pipfile.lock|
-          (\/.*?\.[\w:]+)/Pipfile.lock|
-          (\/.*?\.[\w:]+)/pyproject.toml|
-          poetry.lock|
-          (\/.*?\.[\w:]+)/poetry.lock|
-          uv.lock|
-          (\/.*?\.[\w:]+)/uv.lock|
-          (\/.*?\.[\w:]+)/requirements.txt|
-          (^|.*/)infra/.*
