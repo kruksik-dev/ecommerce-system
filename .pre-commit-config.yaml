@@ -50,3 +50,4 @@ repos:
           uv.lock|
           (\/.*?\.[\w:]+)/uv.lock|
           (\/.*?\.[\w:]+)/requirements.txt|
+          (^|.*/)infra/.*
